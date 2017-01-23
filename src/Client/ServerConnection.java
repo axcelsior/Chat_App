@@ -4,6 +4,8 @@
  */
 package Client;
 
+import java.io.IOException;
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -47,7 +49,7 @@ public class ServerConnection {
 			System.out.println("Exception at " + e.getMessage());
 		} finally {
 			m_socket = temp_socket; // Assigning Servers Socket with given port
-			temp_socket.close(); // Closing temporary socket
+			//temp_socket.close(); // Closing temporary socket
 			System.out.println("Socket created and attached to port: " + port);
 		}
 
@@ -61,6 +63,32 @@ public class ServerConnection {
 		// * unmarshal response message to determine whether connection was
 		// successful
 		// * return false if connection failed (e.g., if user name was taken)
+		
+		byte[] buf = new byte[256];
+		buf = name.getBytes();
+		DatagramPacket packet = new DatagramPacket(buf,buf.length,m_serverAddress,m_serverPort);
+		// * send a chat message to the server
+		try{
+			m_socket.send(packet);
+		} catch(IOException e){
+			System.out.println("IO exception at: " + e.getMessage());
+		}
+		
+		String string = null;
+		byte[] resp = new byte[8];
+		DatagramPacket p = new DatagramPacket(resp,resp.length,m_serverAddress,m_serverPort);
+		try{
+			m_socket.receive(p);
+		} catch(IOException e){
+			System.out.println("IO Exception at: " + e.getMessage());
+		} finally{
+			String sentance = new String(p.getData(),0,p.getLength());
+			string = sentance;
+		}
+		if (string == "0"){
+			return false;
+		}
+		
 		return true;
 	}
 
@@ -71,19 +99,41 @@ public class ServerConnection {
 
 		// Note that the main thread can block on receive here without
 		// problems, since the GUI runs in a separate thread
-
+		String string = null;
+		byte[] buf = new byte[256];
+		DatagramPacket p = new DatagramPacket(buf,buf.length,m_serverAddress,m_serverPort);
+		try{
+			m_socket.receive(p);
+		} catch(IOException e){
+			System.out.println("IO Exception at: " + e.getMessage());
+		} finally{
+			String sentance = new String(p.getData(),0,p.getLength());
+			string = sentance;
+		}
 		// Update to return message contents
-		return "";
+		return string;
+		
+		
+		
 	}
 
 	public void sendChatMessage(String message) {
 		Random generator = new Random();
 		double failure = generator.nextDouble();
-
+		
 		if (failure > TRANSMISSION_FAILURE_RATE) {
 			// TODO:
 			// * marshal message if necessary
+			byte[] buf = new byte[256];
+			buf = message.getBytes();
+			DatagramPacket packet = new DatagramPacket(buf,buf.length,m_serverAddress,m_serverPort);
 			// * send a chat message to the server
+			try{
+				m_socket.send(packet);
+			} catch(IOException e){
+				System.out.println("IO exception at: " + e.getMessage());
+			}
+			
 		} else {
 			// Message got lost
 		}

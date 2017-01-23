@@ -1,5 +1,7 @@
 package Server;
 
+import java.io.IOException;
+
 //
 // Source file for the server side. 
 //
@@ -45,7 +47,7 @@ public class Server {
 			System.out.println("Exception at " + e.getMessage());
 		} finally {
 			m_socket = temp_socket; // Assigning Servers Socket with given port
-			temp_socket.close(); // Closing temporary socket
+			//temp_socket.close(); // Closing temporary socket
 			System.out.println("Socket created and attached to port: " + portNumber);
 		}
 	}
@@ -62,6 +64,31 @@ public class Server {
 			// response message to client detailing whether it was successful
 			// - Broadcast the message to all connected users using broadcast()
 			// - Send a private message to a user using sendPrivateMessage()
+
+			String message = null;
+			byte[] buf = new byte[256];
+			DatagramPacket p = new DatagramPacket(buf, buf.length);
+			try {
+				m_socket.receive(p);
+			} catch (IOException e) {
+				System.out.println("IO exception at: " + e.getMessage());
+			} finally {
+				String sentance = new String(p.getData(), 0, p.getLength());
+				System.out.println("Recieved Message: " + sentance);
+				message = sentance;
+			}
+
+			if (!addClient(message, p.getAddress(), p.getPort())) {
+				byte[] sendData = new byte[8];
+				sendData[0] = 1;
+				DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(), p.getPort());
+
+				try {
+					m_socket.send(s);
+				} catch (IOException e) {
+					System.out.println("IOException at: " + e.getMessage());
+				}
+			}
 		} while (true);
 	}
 
