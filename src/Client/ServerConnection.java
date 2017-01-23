@@ -6,6 +6,7 @@ package Client;
 
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Random;
 
 /**
@@ -28,6 +29,27 @@ public class ServerConnection {
 		// * get address of host based on parameters and assign it to
 		// m_serverAddress
 		// * set up socket and assign it to m_socket
+		try {
+			m_serverAddress = InetAddress.getByName(hostName);
+			
+		} catch (UnknownHostException e){
+			System.out.println("Unknown host expection at: " + e.getMessage());
+		}
+		
+		DatagramSocket temp_socket = null; // Creating temporary socket to
+		// assign port
+
+		try {
+			temp_socket = new DatagramSocket(m_serverPort);
+		} catch (NullPointerException e) {
+			System.out.println("Exception Nullpointer @ " + e.getMessage());
+		} catch (Exception e) {
+			System.out.println("Exception at " + e.getMessage());
+		} finally {
+			m_socket = temp_socket; // Assigning Servers Socket with given port
+			temp_socket.close(); // Closing temporary socket
+			System.out.println("Socket created and attached to port: " + port);
+		}
 
 	}
 

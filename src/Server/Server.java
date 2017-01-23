@@ -34,6 +34,20 @@ public class Server {
 	private Server(int portNumber) {
 		// TODO: create a socket, attach it to port based on portNumber, and
 		// assign it to m_socket
+		DatagramSocket temp_socket = null; // Creating temporary socket to
+											// assign port
+
+		try {
+			temp_socket = new DatagramSocket(portNumber);
+		} catch (NullPointerException e) {
+			System.out.println("Exception Nullpointer @ " + e.getMessage());
+		} catch (Exception e) {
+			System.out.println("Exception at " + e.getMessage());
+		} finally {
+			m_socket = temp_socket; // Assigning Servers Socket with given port
+			temp_socket.close(); // Closing temporary socket
+			System.out.println("Socket created and attached to port: " + portNumber);
+		}
 	}
 
 	private void listenForClientMessages() {
