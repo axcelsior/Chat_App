@@ -72,6 +72,8 @@ public class ServerConnection {
 			m_socket.send(packet);
 		} catch(IOException e){
 			System.out.println("IO exception at: " + e.getMessage());
+		} catch(NullPointerException e){
+			System.out.println("Nullptr exception at: "+ e.getMessage());
 		}
 		
 		String string = null;
