@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.net.*;
 //import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 
 public class Server {
@@ -67,6 +68,7 @@ public class Server {
 
 			String message = null;
 			byte[] buf = new byte[256];
+			
 			DatagramPacket p = new DatagramPacket(buf, buf.length);
 			try {
 				m_socket.receive(p);
@@ -77,11 +79,31 @@ public class Server {
 				System.out.println("Recieved Message: " + sentance);
 				message = sentance;
 			}
+			
+			
 			String command = null;
 			String name = null;
+			String text = null;
+			String sender = null;
 			boolean isCMD = false;
 			int i = 0;
 			char c = (char) message.charAt(0);
+			
+			String[] splited = message.split("\\s+");
+			sender = splited[0];
+			splited[0] = "";
+			
+		    if (splited[1].startsWith("/")){
+		    	System.out.println("Its a command");
+		    	isCMD = true;
+		    	command = splited[1];
+		    	splited[1] = "";
+		    }else{
+		    	isCMD = false;
+		    	// then its a broadcast
+		    	text = String.join(" ", splited);
+		    }
+		    /*
 			if (c == '/') {
 
 				while (c != ' ' && i < message.length()) {
@@ -93,13 +115,24 @@ public class Server {
 				isCMD = true;
 				System.out.println("Command registered: <" + command + ">");
 			}
+			*/
 			String connect = "/connect";
 			
 			if (isCMD) {
+				if (command.equals("/list")){
+					String s = getList();
+					sendPrivateMessage(s,sender);
+				}
+				if (command.equals("/leave")){
+					removeClient(sender);
+					broadcast("[Attention] "+ sender + " has disconnected.");
+				}
 				if (command.equals("/tell")) {
-					String rest = message.substring(i);
 					String recieverName = null;
-					String tellMsg = null;
+					/*
+					String rest = message.substring(i);
+					
+					
 					while (c != ' ' && i < rest.length()) {
 						c = (char) rest.charAt(i);
 						i += 1;
@@ -107,12 +140,16 @@ public class Server {
 					
 					recieverName = rest.substring(0, i - 2);
 					tellMsg ="[private]: "+ rest.substring(i-1);
-					System.out.println("Message: "+ tellMsg + " sent to <" + recieverName+ ">");
-					sendPrivateMessage(tellMsg,recieverName);
+					*/
+					recieverName = splited[2];
+					splited[2] = "";
+					text = String.join(" ", splited);
+					System.out.println("Message: "+ text + " sent to <" + recieverName+ "> from" + sender);
+					sendPrivateMessage("[Private] from -> "+sender+": "+ text ,recieverName);
 				}
 
 				if (command.equals(connect)) {
-					name = message.substring(i);
+					name = splited[2];
 					System.out.println("User " + name + " trying to connect...");
 					if (!addClient(name, p.getAddress(), p.getPort())) {
 						byte[] sendData = new byte[8];
@@ -134,19 +171,32 @@ public class Server {
 
 						try {
 							m_socket.send(s);
-							broadcast(name + " connected to the chatroom!");
+							broadcast("[Attention!]" + name + " connected to the chatroom!");
 						} catch (IOException e) {
 							System.out.println("IOException at: " + e.getMessage());
 						}
 					}
 				}
 			} else {
-				broadcast(":" +message);
+				broadcast(sender+": "+text);
 			}
 
 		} while (true);
 	}
 
+	private String getList(){
+		String returnValue = null;
+		String[] nameList = null;
+		ClientConnection c;
+		int i = 0;
+		for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
+			c = itr.next();
+			nameList[i] = c.getName();
+			i++;
+		}
+		returnValue ="List: " + String.join(", ", nameList) + ".";
+		return returnValue;
+	}
 	public boolean addClient(String name, InetAddress address, int port) {
 		ClientConnection c;
 		for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
@@ -157,6 +207,17 @@ public class Server {
 		}
 		m_connectedClients.add(new ClientConnection(name, address, port));
 		return true;
+	}
+	public boolean removeClient(String name) {
+		ClientConnection c;
+		for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
+			c = itr.next();
+			if (c.hasName(name)) {
+				m_connectedClients.remove(c);
+				return true; // successful
+			}
+		}
+		return false;
 	}
 
 	public void sendPrivateMessage(String message, String name) {

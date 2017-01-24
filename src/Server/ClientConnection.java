@@ -49,7 +49,9 @@ public class ClientConnection {
 		}
 
 	}
-
+	public String getName(){
+		return m_name;
+	}
 	public boolean hasName(String testName) {
 		return testName.equals(m_name);
 	}

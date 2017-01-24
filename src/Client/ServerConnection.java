@@ -63,8 +63,8 @@ public class ServerConnection {
 		// successful
 		// * return false if connection failed (e.g., if user name was taken)
 		String message = null;
-		String cmd = "/connect ";
-		message = cmd + name;
+		String cmd = " /connect ";
+		message =  name + cmd + name ;
 		
 		byte[] buf = new byte[256];
 		buf = message.getBytes();
