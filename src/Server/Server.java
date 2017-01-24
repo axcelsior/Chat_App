@@ -134,6 +134,7 @@ public class Server {
 
 						try {
 							m_socket.send(s);
+							broadcast(name + " connected to the chatroom!");
 						} catch (IOException e) {
 							System.out.println("IOException at: " + e.getMessage());
 						}
