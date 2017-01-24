@@ -110,18 +110,6 @@ public class Server {
 					System.out.println("Message: "+ tellMsg + " sent to <" + recieverName+ ">");
 					sendPrivateMessage(tellMsg,recieverName);
 				}
-				if (command.equals("/test")) {
-					byte[] sendData = new byte[8];
-					String t = "You issued a test command!";
-					sendData = t.getBytes();
-					DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(), p.getPort());
-
-					try {
-						m_socket.send(s);
-					} catch (IOException e) {
-						System.out.println("IOException at: " + e.getMessage());
-					}
-				}
 
 				if (command.equals(connect)) {
 					name = message.substring(i);

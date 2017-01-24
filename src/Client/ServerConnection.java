@@ -40,9 +40,8 @@ public class ServerConnection {
 		
 		DatagramSocket temp_socket = null; // Creating temporary socket to
 		// assign port
-		int socket_port = 25001;
 		try {
-			temp_socket = new DatagramSocket(socket_port);
+			temp_socket = new DatagramSocket();
 		} catch (NullPointerException e) {
 			System.out.println("Exception Nullpointer @ " + e.getMessage());
 		} catch (Exception e) {
@@ -50,7 +49,7 @@ public class ServerConnection {
 		} finally {
 			m_socket = temp_socket; // Assigning Servers Socket with given port
 			//temp_socket.close(); // Closing temporary socket
-			System.out.println("Socket created and attached to port: " + socket_port);
+			System.out.println("Socket created and attached to port: " + temp_socket.getPort());
 		}
 
 	}

@@ -32,7 +32,7 @@ public class ClientConnection {
 
 		Random generator = new Random();
 		double failure = generator.nextDouble();
-		String msg = m_name +" "+ message;
+		String msg =  message;
 		if (failure > TRANSMISSION_FAILURE_RATE) {
 			// TODO: send a message to this client using socket.
 			byte[] sendData = new byte[256];
