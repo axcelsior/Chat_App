@@ -40,9 +40,9 @@ public class ServerConnection {
 		
 		DatagramSocket temp_socket = null; // Creating temporary socket to
 		// assign port
-
+		int socket_port = 25001;
 		try {
-			temp_socket = new DatagramSocket(m_serverPort);
+			temp_socket = new DatagramSocket(socket_port);
 		} catch (NullPointerException e) {
 			System.out.println("Exception Nullpointer @ " + e.getMessage());
 		} catch (Exception e) {
@@ -50,7 +50,7 @@ public class ServerConnection {
 		} finally {
 			m_socket = temp_socket; // Assigning Servers Socket with given port
 			//temp_socket.close(); // Closing temporary socket
-			System.out.println("Socket created and attached to port: " + port);
+			System.out.println("Socket created and attached to port: " + socket_port);
 		}
 
 	}
@@ -88,9 +88,10 @@ public class ServerConnection {
 			string = sentance;
 		}
 		if (string == "0"){
+			System.out.println("Connection to server failed...");
 			return false;
 		}
-		
+		System.out.println("Connection to " + m_serverAddress+":"+m_serverPort+" established.");
 		return true;
 	}
 

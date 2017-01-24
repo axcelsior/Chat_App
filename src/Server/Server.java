@@ -80,9 +80,21 @@ public class Server {
 
 			if (!addClient(message, p.getAddress(), p.getPort())) {
 				byte[] sendData = new byte[8];
-				sendData[0] = 1;
+				String st = "0";
+				sendData = st.getBytes();
 				DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(), p.getPort());
 
+				try {
+					m_socket.send(s);
+				} catch (IOException e) {
+					System.out.println("IOException at: " + e.getMessage());
+				}
+			}else{
+				byte[] sendData = new byte[8];
+				String t = "1";
+				sendData = t.getBytes();
+				DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(), p.getPort());
+				
 				try {
 					m_socket.send(s);
 				} catch (IOException e) {
