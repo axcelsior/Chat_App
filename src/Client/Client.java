@@ -44,9 +44,9 @@ public class Client implements ActionListener {
 	private void listenForServerMessages() {
 		// Use the code below once m_connection.receiveChatMessage() has been
 		// implemented properly.
-		// do {
-		// m_GUI.displayMessage(m_connection.receiveChatMessage());
-		// } while(true);
+		do {
+			m_GUI.displayMessage(m_connection.receiveChatMessage());
+		} while(true);
 	}
 
 	// Sole ActionListener method; acts as a callback from GUI when user hits

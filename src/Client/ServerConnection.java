@@ -63,9 +63,12 @@ public class ServerConnection {
 		// * unmarshal response message to determine whether connection was
 		// successful
 		// * return false if connection failed (e.g., if user name was taken)
+		String message = null;
+		String cmd = "/connect ";
+		message = cmd + name;
 		
 		byte[] buf = new byte[256];
-		buf = name.getBytes();
+		buf = message.getBytes();
 		DatagramPacket packet = new DatagramPacket(buf,buf.length,m_serverAddress,m_serverPort);
 		// * send a chat message to the server
 		try{

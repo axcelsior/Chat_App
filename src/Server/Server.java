@@ -47,7 +47,7 @@ public class Server {
 			System.out.println("Exception at " + e.getMessage());
 		} finally {
 			m_socket = temp_socket; // Assigning Servers Socket with given port
-			//temp_socket.close(); // Closing temporary socket
+			// temp_socket.close(); // Closing temporary socket
 			System.out.println("Socket created and attached to port: " + portNumber);
 		}
 	}
@@ -77,30 +77,84 @@ public class Server {
 				System.out.println("Recieved Message: " + sentance);
 				message = sentance;
 			}
+			String command = null;
+			String name = null;
+			boolean isCMD = false;
+			int i = 0;
+			char c = (char) message.charAt(0);
+			if (c == '/') {
 
-			if (!addClient(message, p.getAddress(), p.getPort())) {
-				byte[] sendData = new byte[8];
-				String st = "0";
-				sendData = st.getBytes();
-				DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(), p.getPort());
+				while (c != ' ' && i < message.length()) {
+					c = (char) message.charAt(i);
+					i += 1;
+				}
+				command = message.substring(0, i - 1);
 
-				try {
-					m_socket.send(s);
-				} catch (IOException e) {
-					System.out.println("IOException at: " + e.getMessage());
-				}
-			}else{
-				byte[] sendData = new byte[8];
-				String t = "1";
-				sendData = t.getBytes();
-				DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(), p.getPort());
-				
-				try {
-					m_socket.send(s);
-				} catch (IOException e) {
-					System.out.println("IOException at: " + e.getMessage());
-				}
+				isCMD = true;
+				System.out.println("Command registered: <" + command + ">");
 			}
+			String connect = "/connect";
+			
+			if (isCMD) {
+				if (command.equals("/tell")) {
+					String rest = message.substring(i);
+					String recieverName = null;
+					String tellMsg = null;
+					while (c != ' ' && i < rest.length()) {
+						c = (char) rest.charAt(i);
+						i += 1;
+					}
+					
+					recieverName = rest.substring(0, i - 2);
+					tellMsg ="[private]: "+ rest.substring(i-1);
+					System.out.println("Message: "+ tellMsg + " sent to <" + recieverName+ ">");
+					sendPrivateMessage(tellMsg,recieverName);
+				}
+				if (command.equals("/test")) {
+					byte[] sendData = new byte[8];
+					String t = "You issued a test command!";
+					sendData = t.getBytes();
+					DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(), p.getPort());
+
+					try {
+						m_socket.send(s);
+					} catch (IOException e) {
+						System.out.println("IOException at: " + e.getMessage());
+					}
+				}
+
+				if (command.equals(connect)) {
+					name = message.substring(i);
+					System.out.println("User " + name + " trying to connect...");
+					if (!addClient(name, p.getAddress(), p.getPort())) {
+						byte[] sendData = new byte[8];
+						String st = "0";
+						sendData = st.getBytes();
+						DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(), p.getPort());
+
+						try {
+							m_socket.send(s);
+						} catch (IOException e) {
+							System.out.println("IOException at: " + e.getMessage());
+						}
+						System.out.println("User: " + name + " already exist! Connection failed.");
+					} else {
+						byte[] sendData = new byte[8];
+						String t = "1";
+						sendData = t.getBytes();
+						DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(), p.getPort());
+
+						try {
+							m_socket.send(s);
+						} catch (IOException e) {
+							System.out.println("IOException at: " + e.getMessage());
+						}
+					}
+				}
+			} else {
+				broadcast(":" +message);
+			}
+
 		} while (true);
 	}
 

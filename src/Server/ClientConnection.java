@@ -4,6 +4,8 @@
  */
 package Server;
 
+import java.io.IOException;
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.Random;
@@ -30,9 +32,18 @@ public class ClientConnection {
 
 		Random generator = new Random();
 		double failure = generator.nextDouble();
-
+		String msg = m_name +" "+ message;
 		if (failure > TRANSMISSION_FAILURE_RATE) {
 			// TODO: send a message to this client using socket.
+			byte[] sendData = new byte[256];
+			sendData = msg.getBytes();
+			DatagramPacket s = new DatagramPacket(sendData, sendData.length,m_address,m_port);
+
+			try {
+				socket.send(s);
+			} catch (IOException e) {
+				System.out.println("IOException at: " + e.getMessage());
+			}
 		} else {
 			// Message got lost
 		}
