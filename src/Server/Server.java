@@ -68,7 +68,7 @@ public class Server {
 
 			String message = null;
 			byte[] buf = new byte[256];
-			
+
 			DatagramPacket p = new DatagramPacket(buf, buf.length);
 			try {
 				m_socket.receive(p);
@@ -79,73 +79,46 @@ public class Server {
 				System.out.println("Recieved Message: " + sentance);
 				message = sentance;
 			}
-			
-			
+
 			String command = null;
 			String name = null;
 			String text = null;
 			String sender = null;
 			boolean isCMD = false;
-			int i = 0;
-			char c = (char) message.charAt(0);
-			
+
 			String[] splited = message.split("\\s+");
 			sender = splited[0];
 			splited[0] = "";
-			
-		    if (splited[1].startsWith("/")){
-		    	System.out.println("Its a command");
-		    	isCMD = true;
-		    	command = splited[1];
-		    	splited[1] = "";
-		    }else{
-		    	isCMD = false;
-		    	// then its a broadcast
-		    	text = String.join(" ", splited);
-		    }
-		    /*
-			if (c == '/') {
 
-				while (c != ' ' && i < message.length()) {
-					c = (char) message.charAt(i);
-					i += 1;
-				}
-				command = message.substring(0, i - 1);
-
+			if (splited[1].startsWith("/")) {
+				System.out.println("Its a command");
 				isCMD = true;
-				System.out.println("Command registered: <" + command + ">");
+				command = splited[1];
+				splited[1] = "";
+			} else {
+				isCMD = false;
+				// then its a broadcast
+				text = String.join(" ", splited);
 			}
-			*/
 			String connect = "/connect";
-			
+
 			if (isCMD) {
-				if (command.equals("/list")){
+				if (command.equals("/list")) {
 					String s = getList();
-					sendPrivateMessage(s,sender);
+					sendPrivateMessage(s, sender);
 				}
-				if (command.equals("/leave")){
+				if (command.equals("/leave")) {
 					removeClient(sender);
-					broadcast("[Attention] "+ sender + " has disconnected.");
+					broadcast("[Server] " + sender + " has disconnected.");
 				}
 				if (command.equals("/tell")) {
 					String recieverName = null;
-					/*
-					String rest = message.substring(i);
-					
-					
-					while (c != ' ' && i < rest.length()) {
-						c = (char) rest.charAt(i);
-						i += 1;
-					}
-					
-					recieverName = rest.substring(0, i - 2);
-					tellMsg ="[private]: "+ rest.substring(i-1);
-					*/
 					recieverName = splited[2];
 					splited[2] = "";
 					text = String.join(" ", splited);
-					System.out.println("Message: "+ text + " sent to <" + recieverName+ "> from" + sender);
-					sendPrivateMessage("[Private] from -> "+sender+": "+ text ,recieverName);
+					System.out.println("Message: " + text + " sent to <" + recieverName + "> from" + sender);
+					sendPrivateMessage("[Private] from -> " + sender + ": " + text, recieverName);
+					sendPrivateMessage("[Private] to -> " + recieverName + ": " + text, sender);
 				}
 
 				if (command.equals(connect)) {
@@ -171,32 +144,31 @@ public class Server {
 
 						try {
 							m_socket.send(s);
-							broadcast("[Attention!]" + name + " connected to the chatroom!");
+							broadcast("[Server] " + name + " connected to the chatroom!");
 						} catch (IOException e) {
 							System.out.println("IOException at: " + e.getMessage());
 						}
 					}
 				}
 			} else {
-				broadcast(sender+": "+text);
+				broadcast(sender + ": " + text);
 			}
 
 		} while (true);
 	}
 
-	private String getList(){
+	private String getList() {
 		String returnValue = null;
 		String[] nameList = null;
-		ClientConnection c;
-		int i = 0;
-		for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
-			c = itr.next();
-			nameList[i] = c.getName();
-			i++;
+		String list = "List: ";
+		for (int i = 0; i < m_connectedClients.size(); i++) {
+			String temp;
+			 list += m_connectedClients.get(i).getName() + ", ";
 		}
-		returnValue ="List: " + String.join(", ", nameList) + ".";
+		returnValue = list;
 		return returnValue;
 	}
+
 	public boolean addClient(String name, InetAddress address, int port) {
 		ClientConnection c;
 		for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
@@ -208,6 +180,7 @@ public class Server {
 		m_connectedClients.add(new ClientConnection(name, address, port));
 		return true;
 	}
+
 	public boolean removeClient(String name) {
 		ClientConnection c;
 		for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
