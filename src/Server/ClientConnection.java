@@ -46,6 +46,7 @@ public class ClientConnection {
 			}
 		} else {
 			// Message got lost
+			sendMessage(message,socket);
 		}
 
 	}
