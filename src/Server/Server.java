@@ -13,12 +13,14 @@ import java.net.*;
 //import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Hashtable;
 import java.util.Iterator;
 
 public class Server {
 
 	private ArrayList<ClientConnection> m_connectedClients = new ArrayList<ClientConnection>();
 	private DatagramSocket m_socket;
+	Hashtable<Integer, Integer> messages = new Hashtable<Integer, Integer>();
 
 	public static void main(String[] args) {
 		if (args.length < 1) {
@@ -53,6 +55,25 @@ public class Server {
 		}
 	}
 
+	private void checkClientConnection() {
+		/*
+		 * for (Iterator<ClientConnection> itr = m_connectedClients.iterator();
+		 * itr.hasNext();) { String message = "S|checkConnection";
+		 * itr.next().sendMessage(message, m_socket);
+		 * 
+		 * String response = null; byte[] buf = new byte[256];
+		 * 
+		 * DatagramPacket p = new DatagramPacket(buf, buf.length); try {
+		 * m_socket.receive(p); } catch (IOException e) {
+		 * System.out.println("IO exception at: " + e.getMessage()); } finally {
+		 * String sentance = new String(p.getData(), 0, p.getLength());
+		 * System.out.println("Recieved Message: " + sentance); response =
+		 * sentance; }
+		 * 
+		 * }
+		 */
+	}
+
 	private void listenForClientMessages() {
 		System.out.println("Waiting for client messages... ");
 
@@ -84,86 +105,94 @@ public class Server {
 			String name = null;
 			String text = null;
 			String sender = null;
-			String sSignature = "S|";
-			String cSignature = "C|";
+			String identifier = null;
 			boolean isCMD = false;
 
 			String[] splited = message.split("\\s+");
-			sender = splited[0];
-			splited[0] = "";
+			identifier = splited[0];
+			int id = Integer.parseInt(identifier);
+			if (!messages.containsKey(id)) {
+				
+				messages.put(id, id);
 
-			if (splited[1].startsWith("/")) {
-				System.out.println("Its a command");
-				isCMD = true;
-				command = splited[1];
+				sender = splited[1];
+				splited[0] = "";
 				splited[1] = "";
-			} else {
-				isCMD = false;
-				// then its a broadcast
-				text = String.join(" ", splited);
-			}
 
-			if (isCMD) {
-				if (command.equals("/list")) {
-					sendPrivateMessage(cSignature+getList(), sender);
-				}
-				if (command.equals("/leave")) {
-					sendPrivateMessage(sSignature+"[Server] You are disconnected." , sender);
-					byte[] sendData = new byte[8];
-					String st = sSignature+"disconnect";
-					sendData = st.getBytes();
-					DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(), p.getPort());
-					try {
-						m_socket.send(s);
-					} catch (IOException e) {
-						System.out.println("IOException at: " + e.getMessage());
-					}
-					broadcast(sSignature+"[Server] " + sender + " has left.");
-					removeClient(sender);
-				}
-				if (command.equals("/tell")) {
-					String recieverName = null;
-					recieverName = splited[2];
+				// Send acknoledgement
+				sendPrivateMessage(identifier + " IDENTIFIER", sender);
+				if (splited[2].startsWith("/")) {
+					isCMD = true;
+					command = splited[2];
 					splited[2] = "";
+				} else {
+					isCMD = false;
+					// then its a broadcast
 					text = String.join(" ", splited);
-					System.out.println("Message: " + text + " sent to <" + recieverName + "> from" + sender);
-					sendPrivateMessage(cSignature+"[Private] from -> " + sender + ": " + text, recieverName);
-					sendPrivateMessage(cSignature+"[Private] to -> " + recieverName + ": " + text, sender);
 				}
 
-				if (command.equals("/connect")) {
-					name = splited[2];
-					System.out.println("User " + name + " trying to connect...");
-					if (!addClient(name, p.getAddress(), p.getPort())) {
+				if (isCMD) {
+					if (command.equals("/list")) {
+						sendPrivateMessage(getList(), sender);
+					}
+					if (command.equals("/leave")) {
+						sendPrivateMessage("[Server] You are disconnected.", sender);
 						byte[] sendData = new byte[8];
-						String st = sSignature + "0";
+						String st = "0 disconnect";
 						sendData = st.getBytes();
 						DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(), p.getPort());
-
 						try {
 							m_socket.send(s);
 						} catch (IOException e) {
 							System.out.println("IOException at: " + e.getMessage());
 						}
-						System.out.println("User: " + name + " already exist! Connection failed.");
-					} else {
-						byte[] sendData = new byte[8];
-						String t = "1";
-						sendData = t.getBytes();
-						DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(), p.getPort());
+						broadcast("0 [Server] " + sender + " has left.");
+						removeClient(sender);
+					}
+					if (command.equals("/tell")) {
+						String recieverName = null;
+						recieverName = splited[3];
+						splited[2] = "";
+						text = String.join(" ", splited);
+						sendPrivateMessage(identifier + " [Private] from -> " + sender + ": " + text, recieverName);
+						sendPrivateMessage(identifier + " [Private] to -> " + recieverName + ": " + text, sender);
+					}
 
-						try {
-							m_socket.send(s);
-							broadcast(sSignature + "[Server] " + name + " connected to the chatroom!");
-						} catch (IOException e) {
-							System.out.println("IOException at: " + e.getMessage());
+					if (command.equals("/connect")) {
+						name = splited[3];
+						System.out.println("User " + name + " trying to connect...");
+						if (!addClient(name, p.getAddress(), p.getPort())) {
+							byte[] sendData = new byte[8];
+							String st = "0";
+							sendData = st.getBytes();
+							DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(),
+									p.getPort());
+
+							try {
+								m_socket.send(s);
+							} catch (IOException e) {
+								System.out.println("IOException at: " + e.getMessage());
+							}
+							System.out.println("User: " + name + " already exist! Connection failed.");
+						} else {
+							byte[] sendData = new byte[8];
+							String t = "1";
+							sendData = t.getBytes();
+							DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(),
+									p.getPort());
+
+							try {
+								m_socket.send(s);
+								broadcast("0 [Server] " + name + " connected to the chatroom!");
+							} catch (IOException e) {
+								System.out.println("IOException at: " + e.getMessage());
+							}
 						}
 					}
+				} else {
+					broadcast(identifier + " " + sender + ": " + text);
 				}
-			} else {
-				broadcast(cSignature+sender + ": " + text);
 			}
-
 		} while (true);
 	}
 

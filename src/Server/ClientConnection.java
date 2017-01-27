@@ -44,9 +44,13 @@ public class ClientConnection {
 			} catch (IOException e) {
 				System.out.println("IOException at: " + e.getMessage());
 			}
+			
+			
+			
 		} else {
 			// Message got lost
-			sendMessage(message,socket);
+			System.out.println("Message lost Server.");
+//			sendMessage(message,socket);
 		}
 
 	}
