@@ -110,17 +110,15 @@ public class Server {
 
 			String[] splited = message.split("\\s+");
 			identifier = splited[0];
+			sender = splited[1];
 			int id = Integer.parseInt(identifier);
 			if (!messages.containsKey(id)) {
-				
+
 				messages.put(id, id);
 
-				sender = splited[1];
 				splited[0] = "";
 				splited[1] = "";
 
-				// Send acknoledgement
-				sendPrivateMessage(identifier + " IDENTIFIER", sender);
 				if (splited[2].startsWith("/")) {
 					isCMD = true;
 					command = splited[2];
@@ -132,6 +130,12 @@ public class Server {
 				}
 
 				if (isCMD) {
+					if (command.equals("/ackn")) {
+						int ackn_ID = Integer.parseInt(splited[3]);
+						System.out.println("Recieved acknoledgement from client!");
+						//Removes ackn_ID from message list
+						messages.remove(ackn_ID);
+					}
 					if (command.equals("/list")) {
 						sendPrivateMessage(getList(), sender);
 					}
@@ -192,7 +196,11 @@ public class Server {
 				} else {
 					broadcast(identifier + " " + sender + ": " + text);
 				}
+			} else {
+				System.out.println("[" + id + "]" + " Duplicated message recieved...");
 			}
+			sendPrivateMessage("ackn " + id, sender);
+
 		} while (true);
 	}
 

@@ -27,8 +27,10 @@ public class ServerConnection {
 	private DatagramSocket m_socket = null;
 	private InetAddress m_serverAddress = null;
 	private int m_serverPort = -1;
-	int identifier;
+	int m_Identifier;
+	int m_UID;
 	Hashtable<Integer, String> messages = new Hashtable<Integer, String>();
+	Hashtable<Integer, Integer> recievedIdentifiers = new Hashtable<Integer, Integer>();
 
 	public ServerConnection(String hostName, int port) {
 		m_serverPort = port;
@@ -70,7 +72,7 @@ public class ServerConnection {
 		// * return false if connection failed (e.g., if user name was taken)
 		String message = null;
 		String cmd = " /connect ";
-		message = "0 " + name + cmd + name;
+		message = "99999 " + name + cmd + name;
 
 		byte[] buf = new byte[256];
 		buf = message.getBytes();
@@ -113,6 +115,7 @@ public class ServerConnection {
 		String string = null;
 		String outPut = null;
 		int id = 0;
+		int acknowledgedMessage = 0;
 		byte[] buf = new byte[256];
 		DatagramPacket p = new DatagramPacket(buf, buf.length, m_serverAddress, m_serverPort);
 		try {
@@ -124,30 +127,48 @@ public class ServerConnection {
 			string = sentance;
 		}
 		String[] split = string.split("\\s+");
+		id = Integer.parseInt(split[0]);
+		if (!recievedIdentifiers.containsKey(Integer.parseInt(split[0]))) {
+			if (split[1].equals("disconnect")) {
+				System.exit(0);
+			}
+			if (split[1].equals("ackn")) {
+				// acknoledgement recieved
+				acknowledgedMessage = Integer.parseInt(split[2]);
+				split[0] = "";
+				split[1] = "";
+				System.out.println("Acnoledgement gotten");
+				messages.remove(acknowledgedMessage);
+				string = "";
+			}
+		} else {
+			string = "";
+			System.out.println(id + " Duplicate message revieved.");
+		}
+		/*
+		 * split[0] = ""; String idS = Integer.toString(id); string = idS +
+		 * String.join(" ", split);
+		 */
+		
+		// Send response to ensure server message got through
+		sendChatMessage(getUID()+" somename /ackn " + Integer.toString(id));
 
-		if (split[1].equals("disconnect")) {
-			System.exit(0);
-		}
-		if (split[1].equals("IDENTIFIER")) {
-			// acknoledgement recieved
-			id = Integer.parseInt(split[0]);
-			split[0] = "";
-			split[1] = "";
-			System.out.println("Acnoledgement gotten");
-			messages.remove(id);
-		}
-		split[0] = "";
-		string = String.join(" ", split);
 		// Update to return message contents
 		return string;
 
 	}
-
+	public Integer getUID(){
+		m_UID++;
+		return m_UID;
+	}
 	public void sendChatMessage(String message) {
 		Random generator = new Random();
 		double failure = generator.nextDouble();
-		String outPut = identifier + " " + message;
-		messages.put(identifier, message);
+		String[] split = message.split(" ");
+		String outPut = message;
+		Integer id = Integer.parseInt(split[0]);
+		m_UID = id;
+		messages.put(id, message);
 
 		if (failure > TRANSMISSION_FAILURE_RATE) {
 			// TODO:
@@ -181,25 +202,24 @@ public class ServerConnection {
 		 * 
 		 * 
 		 */
-		if (messages.containsKey(identifier)) {
+		m_Identifier = id;
+		if (messages.containsKey(id)) {
 			Timer timer = new Timer();
 			TimerTask task = new TimerTask() {
-				int i = identifier;
+				int i = m_Identifier;
 
 				@Override
 				public void run() {
-					if (messages.containsKey(i)) {
-						System.out.println("Re-trying...");
-						sendChatMessage(messages.get(i));
+					if (!messages.containsKey(i)) {
+						return; // do not resend
 					} else {
-						return;
+						System.out.println("Re-trying to send [" + i + "]");
+						sendChatMessage(messages.get(i));
 					}
 				}
 			};
 			timer.schedule(task, 400);
 		}
-
-		identifier++;
 	}
 
 }

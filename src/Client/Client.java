@@ -8,7 +8,7 @@ public class Client implements ActionListener {
 	private String m_name = null;
 	private final ChatGUI m_GUI;
 	private ServerConnection m_connection = null;
-	private int identifier = 0;
+	public int identifier = 0;
 	public static void main(String[] args) {
 		if (args.length < 3) {
 			System.err.println("Usage: java Client serverhostname serverportnumber username");
@@ -61,7 +61,7 @@ public class Client implements ActionListener {
 		// field,
 		// the text in the chat input field can now be sent to the server.
 		
-		m_connection.sendChatMessage(m_name+ " " + m_GUI.getInput());
+		m_connection.sendChatMessage(identifier+ " "+m_name+ " " + m_GUI.getInput());
 		identifier++;
 		m_GUI.clearInput();
 	}
