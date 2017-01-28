@@ -67,6 +67,37 @@ public class ClientConnection {
 		
 		
 		m_resendSocket = socket;
+		
+		class MyThread implements Runnable {
+			int message_id;
+			DatagramSocket send_socket;
+			public MyThread(int id,DatagramSocket socket) {
+				// store parameter for later user
+				message_id = id;
+				send_socket = socket;
+			}
+
+			public void run() {
+				try {
+					Thread.sleep(4000);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				if (!messages.containsKey(message_id)){
+					return; // do not resend
+				}
+				else {
+					System.out.println("[Server] Re-trying to send [" + Integer.toString(message_id) + "]");
+					sendMessage(messages.get(message_id),send_socket);
+				}
+
+			}
+		}
+		Runnable r = new MyThread(m_Identifier,socket);
+		new Thread(r).start();
+		
+		/*
 		if (messages.containsKey(m_Identifier)) {
 			Timer timer = new Timer();
 			TimerTask task = new TimerTask() {
@@ -85,6 +116,7 @@ public class ClientConnection {
 			};
 			timer.schedule(task, 400);
 		}
+		*/
 		m_Identifier++;
 	}
 

@@ -137,7 +137,7 @@ public class ServerConnection {
 				acknowledgedMessage = Integer.parseInt(split[2]);
 				split[0] = "";
 				split[1] = "";
-				System.out.println("Acnoledgement gotten");
+				System.out.println("Acnoledgement gotten. Removing: " + split[2]);
 				messages.remove(acknowledgedMessage);
 				string = "";
 			}
@@ -149,18 +149,20 @@ public class ServerConnection {
 		 * split[0] = ""; String idS = Integer.toString(id); string = idS +
 		 * String.join(" ", split);
 		 */
-		
+
 		// Send response to ensure server message got through
-		sendChatMessage(getUID()+" somename /ackn " + Integer.toString(id));
+		sendChatMessage(getUID() + " somename /ackn " + Integer.toString(id));
 
 		// Update to return message contents
 		return string;
 
 	}
-	public Integer getUID(){
+
+	public Integer getUID() {
 		m_UID++;
 		return m_UID;
 	}
+
 	public void sendChatMessage(String message) {
 		Random generator = new Random();
 		double failure = generator.nextDouble();
@@ -188,38 +190,45 @@ public class ServerConnection {
 
 		} else {
 			System.out.println("Message lost Client");
-			// sendChatMessage(messages.get(identifier));
-
 		}
-		/*
-		 * Thread thread = new Thread() { int i = identifier; public void run()
-		 * { System.out.println("Thread Running for id: " + i);
-		 * 
-		 * 
-		 * } };
-		 * 
-		 * thread.start();
-		 * 
-		 * 
-		 */
 		m_Identifier = id;
-		if (messages.containsKey(id)) {
-			Timer timer = new Timer();
-			TimerTask task = new TimerTask() {
-				int i = m_Identifier;
 
-				@Override
-				public void run() {
-					if (!messages.containsKey(i)) {
-						return; // do not resend
-					} else {
-						System.out.println("Re-trying to send [" + i + "]");
-						sendChatMessage(messages.get(i));
-					}
+		class MyThread implements Runnable {
+			int message_id;
+
+			public MyThread(int id) {
+				// store parameter for later user
+				message_id = id;
+			}
+
+			public void run() {
+				try {
+					Thread.sleep(4000);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
-			};
-			timer.schedule(task, 400);
+				if (!messages.containsKey(message_id)) {
+					return;
+				} else {
+					sendChatMessage(messages.get(message_id));
+				}
+
+			}
 		}
+		Runnable r = new MyThread(id);
+		new Thread(r).start();
+		/*
+		 * if (messages.containsKey(id)) { Timer timer = new Timer(); TimerTask
+		 * task = new TimerTask() { public int i = m_Identifier;
+		 * 
+		 * @Override public void run() { if (!messages.containsKey(i)) { return;
+		 * // do not resend } else { System.out.println("Re-trying to send [" +
+		 * i + "]"); sendChatMessage(messages.get(i)); } } };
+		 * timer.schedule(task, 400);
+		 * 
+		 * }
+		 */
 	}
 
 }

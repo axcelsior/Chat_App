@@ -132,7 +132,7 @@ public class Server {
 				if (isCMD) {
 					if (command.equals("/ackn")) {
 						int ackn_ID = Integer.parseInt(splited[3]);
-						System.out.println("Recieved acknoledgement from client!");
+						System.out.println("Recieved acknoledgement from client! Removing: "+ splited[3]);
 						//Removes ackn_ID from message list
 						messages.remove(ackn_ID);
 					}
@@ -150,7 +150,7 @@ public class Server {
 						} catch (IOException e) {
 							System.out.println("IOException at: " + e.getMessage());
 						}
-						broadcast("0 [Server] " + sender + " has left.");
+						broadcast("[Server] " + sender + " has left.");
 						removeClient(sender);
 					}
 					if (command.equals("/tell")) {
@@ -158,8 +158,8 @@ public class Server {
 						recieverName = splited[3];
 						splited[2] = "";
 						text = String.join(" ", splited);
-						sendPrivateMessage(identifier + " [Private] from -> " + sender + ": " + text, recieverName);
-						sendPrivateMessage(identifier + " [Private] to -> " + recieverName + ": " + text, sender);
+						sendPrivateMessage("[Private] from -> " + sender + ": " + text, recieverName);
+						sendPrivateMessage("[Private] to -> " + recieverName + ": " + text, sender);
 					}
 
 					if (command.equals("/connect")) {
@@ -187,14 +187,14 @@ public class Server {
 
 							try {
 								m_socket.send(s);
-								broadcast("0 [Server] " + name + " connected to the chatroom!");
+								broadcast("[Server] " + name + " connected to the chatroom!");
 							} catch (IOException e) {
 								System.out.println("IOException at: " + e.getMessage());
 							}
 						}
 					}
 				} else {
-					broadcast(identifier + " " + sender + ": " + text);
+					broadcast(sender + ": " + text);
 				}
 			} else {
 				System.out.println("[" + id + "]" + " Duplicated message recieved...");
