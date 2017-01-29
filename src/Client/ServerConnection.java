@@ -70,6 +70,8 @@ public class ServerConnection {
 		// * unmarshal response message to determine whether connection was
 		// successful
 		// * return false if connection failed (e.g., if user name was taken)
+		
+		
 		String message = null;
 		String cmd = " /connect ";
 		message = getUID() + " " + name + cmd + name;
@@ -97,12 +99,15 @@ public class ServerConnection {
 			String sentance = new String(p.getData(), 0, p.getLength());
 			string = sentance;
 		}
+		
 		if (string == "0") {
 			System.out.println("Connection to server failed...");
 			return false;
 		}
+		
 		System.out.println("Connection to " + m_serverAddress + ":" + m_serverPort + " established.");
 		return true;
+		
 	}
 
 	public String receiveChatMessage() {
@@ -132,6 +137,10 @@ public class ServerConnection {
 		id = Integer.parseInt(split[0]);
 		if (!recievedIdentifiers.containsKey(Integer.parseInt(split[0]))) {
 			recievedIdentifiers.put(id, id);
+			if (split[1].equals("connectionAllowed")){
+				sender = split[2];
+				string = "Connected!";
+			}
 			if (split[1].equals("disconnect")) {
 				System.exit(0);
 			}
@@ -151,21 +160,21 @@ public class ServerConnection {
 				sender = split[3];
 				split[0] = "";
 				split[1] = "";
-				System.out.println("Acnoledgement of duped message gotten. Removing: " + split[2]);
+				System.out.println("Acknowledgement of duped message gotten. Removing: " + split[2]);
 				messages.remove(acknowledgedMessage);
 				string = "";
 				duped = true;
 			}
-			
+
 			// Send response to ensure server message got through
 			if (!duped) {
-				sendNewChatMessage( sender + " /ackn " + Integer.toString(id) + " " + sender);
+				sendNewChatMessage(sender + " /ackn " + Integer.toString(id));
 			}
-			
+
 		} else {
 			string = "";
 			System.out.println(id + " Duplicate message revieved.");
-			sendNewChatMessage(sender +" /ackndupe " + Integer.toString(id));
+			sendNewChatMessage(sender + " /ackndupe " + Integer.toString(id));
 		}
 		// Update to return message contents
 		return string;
@@ -176,19 +185,20 @@ public class ServerConnection {
 		m_UID++;
 		return m_UID;
 	}
-	public void sendNewChatMessage(String message){
+
+	public void sendNewChatMessage(String message) {
 		int UID = getUID();
 		String outPut = Integer.toString(UID) + " " + message;
 		messages.put(UID, outPut);
 		sendChatMessage(outPut);
 	}
+
 	public void sendChatMessage(String message) {
 		Random generator = new Random();
 		double failure = generator.nextDouble();
 		String[] split = message.split(" ");
 		String outPut = message;
 		Integer id = Integer.parseInt(split[0]);
-		
 
 		if (failure > TRANSMISSION_FAILURE_RATE) {
 			// TODO:
@@ -237,7 +247,9 @@ public class ServerConnection {
 			}
 		}
 		Runnable r = new MyThread(id);
-		new Thread(r).start();
+		if (messages.containsKey(id)) {
+			new Thread(r).start();
+		}
 		/*
 		 * if (messages.containsKey(id)) { Timer timer = new Timer(); TimerTask
 		 * task = new TimerTask() { public int i = m_Identifier;

@@ -85,27 +85,28 @@ public class Server {
 				System.out.println("Recieved Message: " + sentance);
 				message = sentance;
 			}
-
+			
+			// message argument variables
 			String command = null;
-			String name = null;
 			String text = null;
 			String sender = null;
 			String identifier = null;
 			boolean isCMD = false;
 			boolean duped = false;
 
-			String[] splited = message.split("\\s+");
+			String[] splited = message.split("\\s+"); // Splitting message by spaces
 			identifier = splited[0];
-			sender = splited[1];
-			int id = Integer.parseInt(identifier);
-			if (!recievedIdentifiers.containsKey(id)) {
+			sender = splited[1]; // Sender name
+			int id = Integer.parseInt(identifier); // Message identifier
+			
+			if (!recievedIdentifiers.containsKey(id)) { // Only perform if message isnt already registered
 
-				recievedIdentifiers.put(id, id);
+				recievedIdentifiers.put(id, id); // Register message 
 
 				splited[0] = "";
 				splited[1] = "";
 
-				if (splited[2].startsWith("/")) {
+				if (splited[2].startsWith("/")) { // If the 2nd arg starts with / its a command
 					isCMD = true;
 					command = splited[2];
 					splited[2] = "";
@@ -161,9 +162,9 @@ public class Server {
 					}
 
 					if (command.equals("/connect")) {
-						name = splited[3];
-						System.out.println("User " + name + " trying to connect...");
-						if (!addClient(name, p.getAddress(), p.getPort())) {
+						System.out.println("User " + sender + " trying to connect...");
+						if (!addClient(sender, p.getAddress(), p.getPort())) {
+							
 							byte[] sendData = new byte[8];
 							String st = "0";
 							sendData = st.getBytes();
@@ -175,7 +176,7 @@ public class Server {
 							} catch (IOException e) {
 								System.out.println("IOException at: " + e.getMessage());
 							}
-							System.out.println("User: " + name + " already exist! Connection failed.");
+							System.out.println("User: " + sender + " already exist! Connection failed.");
 						} else {
 							byte[] sendData = new byte[8];
 							String t = "1";
@@ -185,22 +186,26 @@ public class Server {
 
 							try {
 								m_socket.send(s);
-								broadcast("[Server] " + name + " connected to the chatroom!");
+								broadcast("[Server] " + sender + " connected to the chatroom!");
 							} catch (IOException e) {
 								System.out.println("IOException at: " + e.getMessage());
 							}
+							
 						}
 					} else {
 						// if not connect
+						
 					}
 				} else {
 					broadcast(sender + ": " + text);
 				}
 				if (!duped) {
+					// Send normal acknowledgement
 					sendPrivateMessage("ackn " + id + " " + sender, sender);
 				}
 			} else {
 				System.out.println("[" + id + "]" + " Duplicated message recieved...");
+				//send acknowledgement of duped message
 				sendPrivateMessage("ackndupe " + id + " " + sender, sender);
 			}
 

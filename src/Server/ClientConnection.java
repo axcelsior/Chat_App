@@ -102,7 +102,9 @@ public class ClientConnection {
 			}
 		}
 		Runnable r = new MyThread(ID,socket);
-		new Thread(r).start();
+		if (messages.containsKey(ID)){
+			new Thread(r).start();
+		}
 		
 	}
 	public int getUID(){
