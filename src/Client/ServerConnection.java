@@ -118,26 +118,25 @@ public class ServerConnection {
 		// Note that the main thread can block on receive here without
 		// problems, since the GUI runs in a separate thread
 		String string = null;
-		String outPut = null;
 		String sender = null;
 		int id = 0;
-		int acknowledgedMessage = 0;
-		boolean duped = false;
+		int acknowledgedMessage = 0; // keeps the id of the process that got its response
+		boolean duped = false; // says if the message was a duplication or not
 		byte[] buf = new byte[256];
 		DatagramPacket p = new DatagramPacket(buf, buf.length, m_serverAddress, m_serverPort);
 		try {
-			m_socket.receive(p);
+			m_socket.receive(p); // Receiving packet
 		} catch (IOException e) {
 			System.out.println("IO Exception at: " + e.getMessage());
 		} finally {
 			String sentance = new String(p.getData(), 0, p.getLength());
 			string = sentance;
 		}
-		String[] split = string.split("\\s+");
+		String[] split = string.split("\\s+"); // splitting message by spaces
 		id = Integer.parseInt(split[0]);
-		if (!recievedIdentifiers.containsKey(Integer.parseInt(split[0]))) {
-			recievedIdentifiers.put(id, id);
-			if (split[1].equals("connectionAllowed")){
+		if (!recievedIdentifiers.containsKey(Integer.parseInt(split[0]))) { // Only do if message identifier isnt 
+			recievedIdentifiers.put(id, id);								// already registered in the id list
+			if (split[1].equals("connectionAllowed")){						// Otherwise add the id to the list
 				sender = split[2];
 				string = "Connected!";
 			}
@@ -181,7 +180,7 @@ public class ServerConnection {
 
 	}
 
-	public Integer getUID() {
+	public Integer getUID() { // Generates new UID for messages.
 		m_UID++;
 		return m_UID;
 	}
@@ -190,7 +189,7 @@ public class ServerConnection {
 		int UID = getUID();
 		String outPut = Integer.toString(UID) + " " + message;
 		messages.put(UID, outPut);
-		sendChatMessage(outPut);
+		sendChatMessage(outPut); // outputs message with UID in front.
 	}
 
 	public void sendChatMessage(String message) {
@@ -213,9 +212,6 @@ public class ServerConnection {
 				System.out.println("IO exception at: " + e.getMessage());
 			}
 
-			// tråd som väntar
-			// kolla om meddelande kommit fram
-
 		} else {
 			System.out.println("Message lost Client");
 		}
@@ -230,7 +226,7 @@ public class ServerConnection {
 
 			public void run() {
 				try {
-					Thread.sleep(400);
+					Thread.sleep(400); // Will resend message after 400 ms
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -247,20 +243,9 @@ public class ServerConnection {
 			}
 		}
 		Runnable r = new MyThread(id);
-		if (messages.containsKey(id)) {
+		if (messages.containsKey(id)) { // Starts resendthread if and only if message is in the re-send list
 			new Thread(r).start();
 		}
-		/*
-		 * if (messages.containsKey(id)) { Timer timer = new Timer(); TimerTask
-		 * task = new TimerTask() { public int i = m_Identifier;
-		 * 
-		 * @Override public void run() { if (!messages.containsKey(i)) { return;
-		 * // do not resend } else { System.out.println("Re-trying to send [" +
-		 * i + "]"); sendChatMessage(messages.get(i)); } } };
-		 * timer.schedule(task, 400);
-		 * 
-		 * }
-		 */
 	}
 
 }

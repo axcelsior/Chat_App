@@ -61,7 +61,7 @@ public class Client implements ActionListener {
 		// field,
 		// the text in the chat input field can now be sent to the server.
 		
-		m_connection.sendNewChatMessage(m_name+ " " + m_GUI.getInput());
+		m_connection.sendNewChatMessage(m_name+ " " + m_GUI.getInput()); // user name + gui input
 		m_GUI.clearInput();
 	}
 }

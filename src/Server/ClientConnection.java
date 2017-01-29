@@ -34,7 +34,7 @@ public class ClientConnection {
 		m_port = port;
 		m_Identifier = 0;
 	}
-	public void sendNewMessage(String message,DatagramSocket socket){
+	public void sendNewMessage(String message,DatagramSocket socket){ // Generates UID and invokes sendMessage
 		int ID = getUID();
 		String msg = ID + " " + message;
 		messages.put(ID, msg);
@@ -102,7 +102,7 @@ public class ClientConnection {
 			}
 		}
 		Runnable r = new MyThread(ID,socket);
-		if (messages.containsKey(ID)){
+		if (messages.containsKey(ID)){ // Starts new thread to resend message after 400 ms if message is registered in the messageList
 			new Thread(r).start();
 		}
 		
