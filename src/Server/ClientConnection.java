@@ -32,22 +32,28 @@ public class ClientConnection {
 		m_name = name;
 		m_address = address;
 		m_port = port;
+		m_Identifier = 0;
 	}
-
+	public void sendNewMessage(String message,DatagramSocket socket){
+		int ID = getUID();
+		String msg = ID + " " + message;
+		messages.put(ID, msg);
+		sendMessage(msg,socket);
+	}
 	public void sendMessage(String message, DatagramSocket socket) {
 
 		Random generator = new Random();
 		double failure = generator.nextDouble();
-		String msg = m_Identifier + " " + message;
-		
+		String[] splitedMsg = message.split(" ");
+		Integer ID = Integer.parseInt(splitedMsg[0]);
 				
-		messages.put(m_Identifier, message);
+		//messages.put(ID, message);
 		
 		
 		if (failure > TRANSMISSION_FAILURE_RATE) {
 			// TODO: send a message to this client using socket.
 			byte[] sendData = new byte[256];
-			sendData = msg.getBytes();
+			sendData = message.getBytes();
 			DatagramPacket s = new DatagramPacket(sendData, sendData.length,m_address,m_port);
 
 			try {
@@ -85,6 +91,7 @@ public class ClientConnection {
 					e.printStackTrace();
 				}
 				if (!messages.containsKey(message_id)){
+					System.out.println("Message already gotten acknowledgement. Closing Thread.");
 					return; // do not resend
 				}
 				else {
@@ -94,32 +101,14 @@ public class ClientConnection {
 
 			}
 		}
-		Runnable r = new MyThread(m_Identifier,socket);
+		Runnable r = new MyThread(ID,socket);
 		new Thread(r).start();
 		
-		/*
-		if (messages.containsKey(m_Identifier)) {
-			Timer timer = new Timer();
-			TimerTask task = new TimerTask() {
-				int i = m_Identifier;
-
-				@Override
-				public void run() {
-					if (!messages.containsKey(i)){
-						return; // do not resend
-					}
-					else {
-						System.out.println("[Server] Re-trying to send [" + Integer.toString(i) + "]");
-						sendMessage(messages.get(i),m_resendSocket);
-					}
-				}
-			};
-			timer.schedule(task, 400);
-		}
-		*/
-		m_Identifier++;
 	}
-
+	public int getUID(){
+		m_Identifier++;
+		return m_Identifier;
+	}
 	public String getName() {
 		return m_name;
 	}

@@ -20,7 +20,7 @@ public class Server {
 
 	private ArrayList<ClientConnection> m_connectedClients = new ArrayList<ClientConnection>();
 	private DatagramSocket m_socket;
-	Hashtable<Integer, Integer> messages = new Hashtable<Integer, Integer>();
+	Hashtable<Integer, Integer> recievedIdentifiers = new Hashtable<Integer, Integer>();
 
 	public static void main(String[] args) {
 		if (args.length < 1) {
@@ -56,22 +56,7 @@ public class Server {
 	}
 
 	private void checkClientConnection() {
-		/*
-		 * for (Iterator<ClientConnection> itr = m_connectedClients.iterator();
-		 * itr.hasNext();) { String message = "S|checkConnection";
-		 * itr.next().sendMessage(message, m_socket);
-		 * 
-		 * String response = null; byte[] buf = new byte[256];
-		 * 
-		 * DatagramPacket p = new DatagramPacket(buf, buf.length); try {
-		 * m_socket.receive(p); } catch (IOException e) {
-		 * System.out.println("IO exception at: " + e.getMessage()); } finally {
-		 * String sentance = new String(p.getData(), 0, p.getLength());
-		 * System.out.println("Recieved Message: " + sentance); response =
-		 * sentance; }
-		 * 
-		 * }
-		 */
+
 	}
 
 	private void listenForClientMessages() {
@@ -107,14 +92,15 @@ public class Server {
 			String sender = null;
 			String identifier = null;
 			boolean isCMD = false;
+			boolean duped = false;
 
 			String[] splited = message.split("\\s+");
 			identifier = splited[0];
 			sender = splited[1];
 			int id = Integer.parseInt(identifier);
-			if (!messages.containsKey(id)) {
+			if (!recievedIdentifiers.containsKey(id)) {
 
-				messages.put(id, id);
+				recievedIdentifiers.put(id, id);
 
 				splited[0] = "";
 				splited[1] = "";
@@ -132,9 +118,21 @@ public class Server {
 				if (isCMD) {
 					if (command.equals("/ackn")) {
 						int ackn_ID = Integer.parseInt(splited[3]);
-						System.out.println("Recieved acknoledgement from client! Removing: "+ splited[3]);
-						//Removes ackn_ID from message list
-						messages.remove(ackn_ID);
+						System.out.println("Recieved acknoledgement from client! Removing: " + splited[3]);
+						// TODO
+						// Remove acknowledged message from the re-send hash
+						// list
+						removeMessage(ackn_ID, sender);
+
+					}
+					if (command.equals("/ackndupe")) {
+						int ackn_ID = Integer.parseInt(splited[3]);
+						System.out.println("Recieved acknoledgement from client! Removing: " + splited[3]);
+						// TODO
+						// Remove acknowledged message from the re-send hash
+						// list
+						removeMessage(ackn_ID, sender);
+						duped = true;
 					}
 					if (command.equals("/list")) {
 						sendPrivateMessage(getList(), sender);
@@ -192,16 +190,33 @@ public class Server {
 								System.out.println("IOException at: " + e.getMessage());
 							}
 						}
+					} else {
+						// if not connect
 					}
 				} else {
 					broadcast(sender + ": " + text);
 				}
+				if (!duped) {
+					sendPrivateMessage("ackn " + id + " " + sender, sender);
+				}
 			} else {
 				System.out.println("[" + id + "]" + " Duplicated message recieved...");
+				sendPrivateMessage("ackndupe " + id + " " + sender, sender);
 			}
-			sendPrivateMessage("ackn " + id, sender);
 
 		} while (true);
+	}
+
+	private void removeMessage(Integer identifier, String name) {
+		ClientConnection c;
+		for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
+			c = itr.next();
+			if (c.hasName(name)) {
+				if (c.messages.containsKey(identifier)) {
+					c.messages.remove(identifier);
+				}
+			}
+		}
 	}
 
 	private String getList() {
@@ -246,14 +261,14 @@ public class Server {
 		for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
 			c = itr.next();
 			if (c.hasName(name)) {
-				c.sendMessage(message, m_socket);
+				c.sendNewMessage(message, m_socket);
 			}
 		}
 	}
 
 	public void broadcast(String message) {
 		for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
-			itr.next().sendMessage(message, m_socket);
+			itr.next().sendNewMessage(message, m_socket);
 		}
 	}
 }

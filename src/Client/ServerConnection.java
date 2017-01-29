@@ -72,7 +72,7 @@ public class ServerConnection {
 		// * return false if connection failed (e.g., if user name was taken)
 		String message = null;
 		String cmd = " /connect ";
-		message = "99999 " + name + cmd + name;
+		message = getUID() + " " + name + cmd + name;
 
 		byte[] buf = new byte[256];
 		buf = message.getBytes();
@@ -114,8 +114,10 @@ public class ServerConnection {
 		// problems, since the GUI runs in a separate thread
 		String string = null;
 		String outPut = null;
+		String sender = null;
 		int id = 0;
 		int acknowledgedMessage = 0;
+		boolean duped = false;
 		byte[] buf = new byte[256];
 		DatagramPacket p = new DatagramPacket(buf, buf.length, m_serverAddress, m_serverPort);
 		try {
@@ -129,30 +131,42 @@ public class ServerConnection {
 		String[] split = string.split("\\s+");
 		id = Integer.parseInt(split[0]);
 		if (!recievedIdentifiers.containsKey(Integer.parseInt(split[0]))) {
+			recievedIdentifiers.put(id, id);
 			if (split[1].equals("disconnect")) {
 				System.exit(0);
 			}
 			if (split[1].equals("ackn")) {
-				// acknoledgement recieved
+				// acknowledgement received
 				acknowledgedMessage = Integer.parseInt(split[2]);
 				split[0] = "";
 				split[1] = "";
+				sender = split[3];
 				System.out.println("Acnoledgement gotten. Removing: " + split[2]);
 				messages.remove(acknowledgedMessage);
 				string = "";
 			}
+			if (split[1].equals("ackndupe")) {
+				// acknowledgement received
+				acknowledgedMessage = Integer.parseInt(split[2]);
+				sender = split[3];
+				split[0] = "";
+				split[1] = "";
+				System.out.println("Acnoledgement of duped message gotten. Removing: " + split[2]);
+				messages.remove(acknowledgedMessage);
+				string = "";
+				duped = true;
+			}
+			
+			// Send response to ensure server message got through
+			if (!duped) {
+				sendNewChatMessage( sender + " /ackn " + Integer.toString(id) + " " + sender);
+			}
+			
 		} else {
 			string = "";
 			System.out.println(id + " Duplicate message revieved.");
+			sendNewChatMessage(sender +" /ackndupe " + Integer.toString(id));
 		}
-		/*
-		 * split[0] = ""; String idS = Integer.toString(id); string = idS +
-		 * String.join(" ", split);
-		 */
-
-		// Send response to ensure server message got through
-		sendChatMessage(getUID() + " somename /ackn " + Integer.toString(id));
-
 		// Update to return message contents
 		return string;
 
@@ -162,15 +176,19 @@ public class ServerConnection {
 		m_UID++;
 		return m_UID;
 	}
-
+	public void sendNewChatMessage(String message){
+		int UID = getUID();
+		String outPut = Integer.toString(UID) + " " + message;
+		messages.put(UID, outPut);
+		sendChatMessage(outPut);
+	}
 	public void sendChatMessage(String message) {
 		Random generator = new Random();
 		double failure = generator.nextDouble();
 		String[] split = message.split(" ");
 		String outPut = message;
 		Integer id = Integer.parseInt(split[0]);
-		m_UID = id;
-		messages.put(id, message);
+		
 
 		if (failure > TRANSMISSION_FAILURE_RATE) {
 			// TODO:
@@ -191,7 +209,6 @@ public class ServerConnection {
 		} else {
 			System.out.println("Message lost Client");
 		}
-		m_Identifier = id;
 
 		class MyThread implements Runnable {
 			int message_id;
@@ -208,9 +225,12 @@ public class ServerConnection {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+				System.out.println("Checking message [" + message_id + "] if it needs to resend");
 				if (!messages.containsKey(message_id)) {
+					System.out.println("Message already gotten acknowledgement. Closing Thread.");
 					return;
 				} else {
+					System.out.println("Resending Message...[" + message_id + "]");
 					sendChatMessage(messages.get(message_id));
 				}
 
