@@ -91,7 +91,7 @@ public class ServerConnection {
 		String string = null;
 		byte[] resp = new byte[8];
 		DatagramPacket p = new DatagramPacket(resp, resp.length, m_serverAddress, m_serverPort);
-		System.out.println("Waiting for handshake response...");
+		
 		try {
 			m_socket.receive(p);
 		} catch (IOException e) {
@@ -100,7 +100,6 @@ public class ServerConnection {
 			String sentance = new String(p.getData(), 0, p.getLength());
 			string = sentance;
 		}
-		System.out.println("Response received...");
 		if (string == "0") {
 			System.out.println("Connection to server failed...");
 			return false;
@@ -136,13 +135,12 @@ public class ServerConnection {
 		}
 		String[] split = string.split("\\s+"); // splitting message by spaces
 		id = Integer.parseInt(split[0]);
-		System.out.println("CLIENT RECIEVED ID: " + split[0]);
-		System.out.println(recievedIdentifiers);
 		if (!recievedIdentifiers.containsKey(id)) { // Only if id isnt received
 													// already
 
 			recievedIdentifiers.put(id, id); // adding msg to list
-
+			split[0] = "";
+			string = String.join(" ", split);
 			if (split[1].equals("connectionAllowed")) { // Otherwise add the id
 														// to the list
 				sender = split[2];
@@ -162,7 +160,8 @@ public class ServerConnection {
 				split[0] = "";
 				split[1] = "";
 				sender = split[3];
-				System.out.println("Acnoledgement gotten. Removing: " + split[2]);
+				
+				// Removing from resend table
 				messages.remove(acknowledgedMessage);
 				string = "";
 			}
@@ -215,7 +214,8 @@ public class ServerConnection {
 			}
 
 		} else {
-			System.out.println("Message lost Client");
+			// Message got lost
+			
 
 		}
 
@@ -233,18 +233,19 @@ public class ServerConnection {
 			// store parameter for later user
 			message_id = id;
 			msg = message;
+			System.out.println("Starting new resend thread for [" + id + "].");
 		}
 
 		public void run() {
 			do {
 
-				System.out.println("Checking message [" + message_id + "] if it needs to resend");
+				// Checking if message is still in resend list
 				if (!messages.containsKey(message_id)) {
-					System.out.println("Message already gotten acknowledgement. Closing Thread.");
+					// Nope... No need to resend
+					System.out.println("Closing resend thread for [" + message_id + "].");
 					this.interrupt();
 					return;
 				} else {
-					System.out.println("Resending Message...[" + message_id + "]");
 					byte[] buf = new byte[256];
 					buf = msg.getBytes();
 					DatagramPacket packet = new DatagramPacket(buf, buf.length, m_serverAddress, m_serverPort);

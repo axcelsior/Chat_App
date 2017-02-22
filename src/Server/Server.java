@@ -76,7 +76,9 @@ public class Server {
 				System.out.println("IO exception at: " + e.getMessage());
 			} finally {
 				String sentance = new String(p.getData(), 0, p.getLength());
+				
 				System.out.println("Recieved Message: " + sentance);
+				
 				message = sentance;
 			}
 
@@ -93,8 +95,6 @@ public class Server {
 			identifier = splited[0];
 			sender = splited[1]; // Sender name
 			int id = Integer.parseInt(identifier); // Message identifier
-			System.out.println("SERVER RECIEVED ID: " + identifier);
-			System.out.println(recievedIdentifiers);
 
 			String ipandport = p.getAddress().getHostName() + ":" + p.getPort();
 			if (!recievedIdentifiers.containsKey(ipandport)) { 
@@ -123,7 +123,7 @@ public class Server {
 					if (isCMD) {
 						if (command.equals("/ackn")) {
 							int ackn_ID = Integer.parseInt(splited[3]);
-							System.out.println("Recieved acknoledgement from client! Removing: " + ackn_ID);
+							
 							// Remove acknowledged message from the re-send
 							// hashtable
 							removeMessage(ackn_ID, sender);

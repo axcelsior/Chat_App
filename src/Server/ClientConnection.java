@@ -72,7 +72,7 @@ public class ClientConnection {
 
 		} else {
 			// Message got lost
-			System.out.println("Message lost Server.");
+			
 		}
 
 		// Starting resend thread if message is not an acknowledgement
@@ -116,6 +116,7 @@ public class ClientConnection {
 			message_id = id;
 			send_socket = socket;
 			this.message = message;
+			System.out.println("Starting new resend thread for [" + id + "].");
 		}
 
 		public void run() {
@@ -123,7 +124,8 @@ public class ClientConnection {
 			do { // Resend loop
 
 				if (!messages.containsKey(message_id)) {
-					System.out.println("Message already gotten acknowledgement. Closing Thread.");
+					
+					System.out.println("Closing resend thread for [" + message_id + "].");
 					this.interrupt();
 					return;
 
@@ -137,7 +139,7 @@ public class ClientConnection {
 					} catch (IOException e) {
 						System.out.println("IOException at: " + e.getMessage());
 					}
-					System.out.println("[Server] Re-trying to send [" + Integer.toString(message_id) + "]");
+					
 				}
 				try {
 					Thread.sleep(400); // Will try again (iterate) after 400 ms
