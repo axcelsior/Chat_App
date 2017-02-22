@@ -35,9 +35,11 @@ public class Client implements ActionListener {
 		// Create a new server connection
 		m_connection = new ServerConnection(hostName, port);
 		if (m_connection.handshake(m_name)) {
+			System.err.println("Connected.");
 			listenForServerMessages();
 		} else {
 			System.err.println("Unable to connect to server");
+			System.exit(-1);
 		}
 	}
 

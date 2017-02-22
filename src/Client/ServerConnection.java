@@ -28,9 +28,10 @@ public class ServerConnection {
 	private InetAddress m_serverAddress = null;
 	private int m_serverPort = -1;
 	int m_Identifier;
-	int m_UID;
+	int m_UID = 0;
 	Hashtable<Integer, String> messages = new Hashtable<Integer, String>();
 	Hashtable<Integer, Integer> recievedIdentifiers = new Hashtable<Integer, Integer>();
+	private String m_name;
 
 	public ServerConnection(String hostName, int port) {
 		m_serverPort = port;
@@ -70,8 +71,7 @@ public class ServerConnection {
 		// * unmarshal response message to determine whether connection was
 		// successful
 		// * return false if connection failed (e.g., if user name was taken)
-		
-		
+		m_name = name;
 		String message = null;
 		String cmd = " /connect ";
 		message = getUID() + " " + name + cmd + name;
@@ -91,6 +91,7 @@ public class ServerConnection {
 		String string = null;
 		byte[] resp = new byte[8];
 		DatagramPacket p = new DatagramPacket(resp, resp.length, m_serverAddress, m_serverPort);
+		System.out.println("Waiting for handshake response...");
 		try {
 			m_socket.receive(p);
 		} catch (IOException e) {
@@ -99,15 +100,15 @@ public class ServerConnection {
 			String sentance = new String(p.getData(), 0, p.getLength());
 			string = sentance;
 		}
-		
+		System.out.println("Response received...");
 		if (string == "0") {
 			System.out.println("Connection to server failed...");
 			return false;
 		}
-		
+
 		System.out.println("Connection to " + m_serverAddress + ":" + m_serverPort + " established.");
 		return true;
-		
+
 	}
 
 	public String receiveChatMessage() {
@@ -120,8 +121,9 @@ public class ServerConnection {
 		String string = null;
 		String sender = null;
 		int id = 0;
-		int acknowledgedMessage = 0; // keeps the id of the process that got its response
-		boolean duped = false; // says if the message was a duplication or not
+		boolean ackn = false;
+		int acknowledgedMessage = 0; // keeps the id of the process that got its
+										// response
 		byte[] buf = new byte[256];
 		DatagramPacket p = new DatagramPacket(buf, buf.length, m_serverAddress, m_serverPort);
 		try {
@@ -134,16 +136,27 @@ public class ServerConnection {
 		}
 		String[] split = string.split("\\s+"); // splitting message by spaces
 		id = Integer.parseInt(split[0]);
-		if (!recievedIdentifiers.containsKey(Integer.parseInt(split[0]))) { // Only do if message identifier isnt 
-			recievedIdentifiers.put(id, id);								// already registered in the id list
-			if (split[1].equals("connectionAllowed")){						// Otherwise add the id to the list
+		System.out.println("CLIENT RECIEVED ID: " + split[0]);
+		System.out.println(recievedIdentifiers);
+		if (!recievedIdentifiers.containsKey(id)) { // Only if id isnt received
+													// already
+
+			recievedIdentifiers.put(id, id); // adding msg to list
+
+			if (split[1].equals("connectionAllowed")) { // Otherwise add the id
+														// to the list
 				sender = split[2];
 				string = "Connected!";
 			}
 			if (split[1].equals("disconnect")) {
 				System.exit(0);
 			}
+			if (split[1].equals("checkConnection")){
+				sendNewChatMessage(m_name + " /alive"); // If server asks if we're still connected. Respond with /alive
+				string = "";
+			}
 			if (split[1].equals("ackn")) {
+				ackn = true;
 				// acknowledgement received
 				acknowledgedMessage = Integer.parseInt(split[2]);
 				split[0] = "";
@@ -153,28 +166,13 @@ public class ServerConnection {
 				messages.remove(acknowledgedMessage);
 				string = "";
 			}
-			if (split[1].equals("ackndupe")) {
-				// acknowledgement received
-				acknowledgedMessage = Integer.parseInt(split[2]);
-				sender = split[3];
-				split[0] = "";
-				split[1] = "";
-				System.out.println("Acknowledgement of duped message gotten. Removing: " + split[2]);
-				messages.remove(acknowledgedMessage);
-				string = "";
-				duped = true;
-			}
-
-			// Send response to ensure server message got through
-			if (!duped) {
-				sendNewChatMessage(sender + " /ackn " + Integer.toString(id));
-			}
-
 		} else {
 			string = "";
-			System.out.println(id + " Duplicate message revieved.");
-			sendNewChatMessage(sender + " /ackndupe " + Integer.toString(id));
 		}
+		// Send response to ensure server message got through
+		if (!ackn)
+			sendNewChatMessage(m_name + " /ackn " + Integer.toString(id));
+
 		// Update to return message contents
 		return string;
 
@@ -194,11 +192,15 @@ public class ServerConnection {
 
 	public void sendChatMessage(String message) {
 		Random generator = new Random();
+		boolean ackn = false;
 		double failure = generator.nextDouble();
 		String[] split = message.split(" ");
 		String outPut = message;
 		Integer id = Integer.parseInt(split[0]);
 
+		if (split.length > 1 && split[2].equals("/ackn")) {
+			ackn = true;
+		}
 		if (failure > TRANSMISSION_FAILURE_RATE) {
 			// TODO:
 			// * marshal message if necessary
@@ -214,38 +216,54 @@ public class ServerConnection {
 
 		} else {
 			System.out.println("Message lost Client");
+
 		}
 
-		class MyThread implements Runnable {
-			int message_id;
-
-			public MyThread(int id) {
-				// store parameter for later user
-				message_id = id;
-			}
-
-			public void run() {
-				try {
-					Thread.sleep(400); // Will resend message after 400 ms
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				System.out.println("Checking message [" + message_id + "] if it needs to resend");
-				if (!messages.containsKey(message_id)) {
-					System.out.println("Message already gotten acknowledgement. Closing Thread.");
-					return;
-				} else {
-					System.out.println("Resending Message...[" + message_id + "]");
-					sendChatMessage(messages.get(message_id));
-				}
-
-			}
-		}
-		Runnable r = new MyThread(id);
-		if (messages.containsKey(id)) { // Starts resendthread if and only if message is in the re-send list
+		if (!ackn) { // Do not open new thread if message is an acknowledgement
+			Thread r = new resendThread(id, outPut);
 			new Thread(r).start();
 		}
 	}
 
+	class resendThread extends Thread {
+		int message_id;
+		String msg;
+
+		public resendThread(int id, String message) {
+			// store parameter for later user
+			message_id = id;
+			msg = message;
+		}
+
+		public void run() {
+			do {
+
+				System.out.println("Checking message [" + message_id + "] if it needs to resend");
+				if (!messages.containsKey(message_id)) {
+					System.out.println("Message already gotten acknowledgement. Closing Thread.");
+					this.interrupt();
+					return;
+				} else {
+					System.out.println("Resending Message...[" + message_id + "]");
+					byte[] buf = new byte[256];
+					buf = msg.getBytes();
+					DatagramPacket packet = new DatagramPacket(buf, buf.length, m_serverAddress, m_serverPort);
+					// * send a chat message to the server
+					try {
+						m_socket.send(packet);
+					} catch (IOException e) {
+						System.out.println("IO exception at: " + e.getMessage());
+					}
+				}
+				try {
+					Thread.sleep(400); // Will try again (iterate) after 400 ms
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+			} while (true);
+
+		}
+	}
 }

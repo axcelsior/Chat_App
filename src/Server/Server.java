@@ -20,7 +20,7 @@ public class Server {
 
 	private ArrayList<ClientConnection> m_connectedClients = new ArrayList<ClientConnection>();
 	private DatagramSocket m_socket;
-	Hashtable<Integer, Integer> recievedIdentifiers = new Hashtable<Integer, Integer>();
+	Hashtable<String, ArrayList<Integer>> recievedIdentifiers = new Hashtable<String, ArrayList<Integer>>();
 
 	public static void main(String[] args) {
 		if (args.length < 1) {
@@ -61,17 +61,11 @@ public class Server {
 
 	private void listenForClientMessages() {
 		System.out.println("Waiting for client messages... ");
+		connectionChecker c_check = new connectionChecker();
+		c_check.start(); // Starting connection checker who will check if
+							// clients are timed out or not.
 
 		do {
-			// TODO: Listen for client messages.
-			// On reception of message, do the following:
-			// * Unmarshal message
-			// * Depending on message type, either
-			// - Try to create a new ClientConnection using addClient(), send
-			// response message to client detailing whether it was successful
-			// - Broadcast the message to all connected users using broadcast()
-			// - Send a private message to a user using sendPrivateMessage()
-
 			String message = null;
 			byte[] buf = new byte[256];
 
@@ -85,129 +79,129 @@ public class Server {
 				System.out.println("Recieved Message: " + sentance);
 				message = sentance;
 			}
-			
+
 			// message argument variables
 			String command = null;
 			String text = null;
 			String sender = null;
 			String identifier = null;
 			boolean isCMD = false;
-			boolean duped = false;
+			boolean ackn = false;
 
-			String[] splited = message.split("\\s+"); // Splitting message by spaces
+			String[] splited = message.split("\\s+"); // Splitting message by
+														// spaces
 			identifier = splited[0];
 			sender = splited[1]; // Sender name
 			int id = Integer.parseInt(identifier); // Message identifier
-			
-			if (!recievedIdentifiers.containsKey(id)) { // Only perform if message isnt already registered
+			System.out.println("SERVER RECIEVED ID: " + identifier);
+			System.out.println(recievedIdentifiers);
 
-				recievedIdentifiers.put(id, id); // Register message 
+			String ipandport = p.getAddress().getHostName() + ":" + p.getPort();
+			if (!recievedIdentifiers.containsKey(ipandport)) { 
+				recievedIdentifiers.put(ipandport, new ArrayList());
+			}
+			if (recievedIdentifiers.containsKey(ipandport)) { 
+				if (!recievedIdentifiers.get(ipandport).contains(id)) {
+					
+					recievedIdentifiers.get(ipandport).add(id);
 
-				splited[0] = "";
-				splited[1] = "";
+					splited[0] = "";
+					splited[1] = "";
 
-				if (splited[2].startsWith("/")) { // If the 2nd arg starts with / its a command
-					isCMD = true;
-					command = splited[2];
-					splited[2] = "";
-				} else {
-					isCMD = false;
-					// then its a broadcast
-					text = String.join(" ", splited);
-				}
-
-				if (isCMD) {
-					if (command.equals("/ackn")) {
-						int ackn_ID = Integer.parseInt(splited[3]);
-						System.out.println("Recieved acknoledgement from client! Removing: " + splited[3]);
-						// TODO
-						// Remove acknowledged message from the re-send hash
-						// list
-						removeMessage(ackn_ID, sender);
-
-					}
-					if (command.equals("/ackndupe")) {
-						int ackn_ID = Integer.parseInt(splited[3]);
-						System.out.println("Recieved acknoledgement from client! Removing: " + splited[3]);
-						// TODO
-						// Remove acknowledged message from the re-send hash
-						// list
-						removeMessage(ackn_ID, sender);
-						duped = true;
-					}
-					if (command.equals("/list")) {
-						sendPrivateMessage(getList(), sender);
-					}
-					if (command.equals("/leave")) {
-						sendPrivateMessage("[Server] You are disconnected.", sender);
-						byte[] sendData = new byte[8];
-						String st = "0 disconnect";
-						sendData = st.getBytes();
-						DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(), p.getPort());
-						try {
-							m_socket.send(s);
-						} catch (IOException e) {
-							System.out.println("IOException at: " + e.getMessage());
-						}
-						broadcast("[Server] " + sender + " has left.");
-						removeClient(sender);
-					}
-					if (command.equals("/tell")) {
-						String recieverName = null;
-						recieverName = splited[3];
+					if (splited[2].startsWith("/")) { // If the 2nd arg starts
+														// with
+														// / its a command
+						isCMD = true;
+						command = splited[2];
 						splited[2] = "";
+					} else {
+						isCMD = false;
+						// then its a broadcast
 						text = String.join(" ", splited);
-						sendPrivateMessage("[Private] from -> " + sender + ": " + text, recieverName);
-						sendPrivateMessage("[Private] to -> " + recieverName + ": " + text, sender);
 					}
 
-					if (command.equals("/connect")) {
-						System.out.println("User " + sender + " trying to connect...");
-						if (!addClient(sender, p.getAddress(), p.getPort())) {
-							
+					if (isCMD) {
+						if (command.equals("/ackn")) {
+							int ackn_ID = Integer.parseInt(splited[3]);
+							System.out.println("Recieved acknoledgement from client! Removing: " + ackn_ID);
+							// Remove acknowledged message from the re-send
+							// hashtable
+							removeMessage(ackn_ID, sender);
+							ackn = true;
+						}
+						if (command.equals("/list")) {
+							sendPrivateMessage(getList(), sender);
+						}
+						if (command.equals("/leave")) {
+							sendPrivateMessage("[Server] You are disconnected.", sender);
 							byte[] sendData = new byte[8];
-							String st = "0";
+							String st = "0 disconnect";
 							sendData = st.getBytes();
 							DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(),
 									p.getPort());
-
 							try {
 								m_socket.send(s);
 							} catch (IOException e) {
 								System.out.println("IOException at: " + e.getMessage());
 							}
-							System.out.println("User: " + sender + " already exist! Connection failed.");
+							broadcast("[Server] " + sender + " has left.");
+							removeClient(sender);
+						}
+						if (command.equals("/tell")) {
+							String recieverName = null;
+							recieverName = splited[3];
+							splited[2] = "";
+							text = String.join(" ", splited);
+							sendPrivateMessage("[Private] from -> " + sender + ": " + text, recieverName);
+							sendPrivateMessage("[Private] to -> " + recieverName + ": " + text, sender);
+						}
+						if (command.equals("/alive")) {
+							setAlive(sender);
+						}
+						if (command.equals("/connect")) {
+							System.out.println("User " + sender + " trying to connect...");
+							if (!addClient(sender, p.getAddress(), p.getPort())) {
+
+								byte[] sendData = new byte[8];
+								String st = "0";
+								sendData = st.getBytes();
+								DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(),
+										p.getPort());
+
+								try {
+									m_socket.send(s);
+								} catch (IOException e) {
+									System.out.println("IOException at: " + e.getMessage());
+								}
+								System.out.println("User: " + sender + " already exist! Connection failed.");
+							} else {
+								byte[] sendData = new byte[8];
+								String t = "1";
+								sendData = t.getBytes();
+								DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(),
+										p.getPort());
+
+								try {
+									m_socket.send(s);
+									broadcast("[Server] " + sender + " connected to the chatroom!");
+								} catch (IOException e) {
+									System.out.println("IOException at: " + e.getMessage());
+								}
+
+							}
 						} else {
-							byte[] sendData = new byte[8];
-							String t = "1";
-							sendData = t.getBytes();
-							DatagramPacket s = new DatagramPacket(sendData, sendData.length, p.getAddress(),
-									p.getPort());
+							// if not connect
 
-							try {
-								m_socket.send(s);
-								broadcast("[Server] " + sender + " connected to the chatroom!");
-							} catch (IOException e) {
-								System.out.println("IOException at: " + e.getMessage());
-							}
-							
 						}
 					} else {
-						// if not connect
-						
+						broadcast(sender + ": " + text);
 					}
-				} else {
-					broadcast(sender + ": " + text);
+
 				}
-				if (!duped) {
-					// Send normal acknowledgement
-					sendPrivateMessage("ackn " + id + " " + sender, sender);
-				}
-			} else {
-				System.out.println("[" + id + "]" + " Duplicated message recieved...");
-				//send acknowledgement of duped message
-				sendPrivateMessage("ackndupe " + id + " " + sender, sender);
 			}
+			// Send acknowledgement
+			if (!ackn)
+				sendPrivateMessage("ackn " + id + " " + sender, sender);
 
 		} while (true);
 	}
@@ -220,6 +214,8 @@ public class Server {
 				if (c.messages.containsKey(identifier)) {
 					c.messages.remove(identifier);
 				}
+			} else {
+				System.out.println("Name: " + name + " not found failed to remove [" + identifier + "]");
 			}
 		}
 	}
@@ -276,4 +272,58 @@ public class Server {
 			itr.next().sendNewMessage(message, m_socket);
 		}
 	}
+
+	public void cleanUpClients() {
+		ClientConnection c;
+		for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
+			c = itr.next();
+			if (!c.isAlive()) {
+				m_connectedClients.remove(c);
+				broadcast("[Server] " + c.getName() + " timed out... Bye!");
+			}
+		}
+	}
+
+	public void setAlive(String name) {
+		ClientConnection c;
+		for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
+			c = itr.next();
+			if (c.hasName(name)) {
+				c.setClientAsAlive(); // Client responded its still alive.
+			}
+		}
+	}
+
+	class connectionChecker extends Thread {
+		String m_message;
+
+		public connectionChecker() {
+			m_message = "checkConnection";
+		}
+
+		public void run() {
+			do {
+				ClientConnection c;
+				for (Iterator<ClientConnection> itr = m_connectedClients.iterator(); itr.hasNext();) {
+					c = itr.next();
+					c.setClientAsDead(); // Sets client as dead. Wont be set as
+											// alive until response is recieved
+					c.sendNewMessage(m_message, m_socket);
+				}
+
+				try {
+					Thread.sleep(3000);
+				} catch (InterruptedException e) {
+
+					e.printStackTrace();
+				}
+
+				// Clean up unresponsive clients
+				cleanUpClients();
+
+			} while (true);
+
+		}
+	}
+
 }

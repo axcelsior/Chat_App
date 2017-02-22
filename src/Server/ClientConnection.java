@@ -25,98 +25,130 @@ public class ClientConnection {
 	private final InetAddress m_address;
 	private final int m_port;
 	int m_Identifier;
-	DatagramSocket m_resendSocket;
 	Hashtable<Integer, String> messages = new Hashtable<Integer, String>();
+	boolean clientAlive;
 
 	public ClientConnection(String name, InetAddress address, int port) {
 		m_name = name;
 		m_address = address;
 		m_port = port;
 		m_Identifier = 0;
+		clientAlive = true;
 	}
-	public void sendNewMessage(String message,DatagramSocket socket){ // Generates UID and invokes sendMessage
+
+	public void sendNewMessage(String message, DatagramSocket socket) { // Generates
+																		// UID
+																		// and
+																		// invokes
+																		// sendMessage
 		int ID = getUID();
 		String msg = ID + " " + message;
 		messages.put(ID, msg);
-		sendMessage(msg,socket);
+		sendMessage(msg, socket);
 	}
-	public void sendMessage(String message, DatagramSocket socket) {
 
+	public void sendMessage(String message, DatagramSocket socket) {
+		boolean ackn = false;
 		Random generator = new Random();
 		double failure = generator.nextDouble();
 		String[] splitedMsg = message.split(" ");
 		Integer ID = Integer.parseInt(splitedMsg[0]);
-				
-		//messages.put(ID, message);
-		
-		
+
+		if (splitedMsg[1].equals("ackn")) {
+			ackn = true;
+		}
+
 		if (failure > TRANSMISSION_FAILURE_RATE) {
-			// TODO: send a message to this client using socket.
+
 			byte[] sendData = new byte[256];
 			sendData = message.getBytes();
-			DatagramPacket s = new DatagramPacket(sendData, sendData.length,m_address,m_port);
+			DatagramPacket s = new DatagramPacket(sendData, sendData.length, m_address, m_port);
 
 			try {
 				socket.send(s);
 			} catch (IOException e) {
 				System.out.println("IOException at: " + e.getMessage());
 			}
-			
-			
-			
+
 		} else {
 			// Message got lost
 			System.out.println("Message lost Server.");
-//			sendMessage(message,socket);
 		}
-		
-		
-		
-		m_resendSocket = socket;
-		
-		class MyThread implements Runnable {
-			int message_id;
-			DatagramSocket send_socket;
-			public MyThread(int id,DatagramSocket socket) {
-				// store parameter for later user
-				message_id = id;
-				send_socket = socket;
-			}
 
-			public void run() {
-				try {
-					Thread.sleep(400);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				if (!messages.containsKey(message_id)){
-					System.out.println("Message already gotten acknowledgement. Closing Thread.");
-					return; // do not resend
-				}
-				else {
-					System.out.println("[Server] Re-trying to send [" + Integer.toString(message_id) + "]");
-					sendMessage(messages.get(message_id),send_socket);
-				}
-
-			}
-		}
-		Runnable r = new MyThread(ID,socket);
-		if (messages.containsKey(ID)){ // Starts new thread to resend message after 400 ms if message is registered in the messageList
+		// Starting resend thread if message is not an acknowledgement
+		if (!ackn) {
+			Thread r = new resendThread(ID, message, socket);
 			new Thread(r).start();
 		}
-		
+
 	}
-	public int getUID(){
+
+	public int getUID() {
 		m_Identifier++;
 		return m_Identifier;
 	}
+
 	public String getName() {
 		return m_name;
 	}
 
 	public boolean hasName(String testName) {
 		return testName.equals(m_name);
+	}
+
+	public void setClientAsDead() {
+		clientAlive = false;
+	}
+	public void setClientAsAlive(){
+		clientAlive = true;
+	}
+
+	public boolean isAlive() {
+		return clientAlive;
+	}
+	class resendThread extends Thread {
+		int message_id;
+		DatagramSocket send_socket;
+		String message;
+
+		public resendThread(int id, String message, DatagramSocket socket) {
+			// store parameter for later user
+			message_id = id;
+			send_socket = socket;
+			this.message = message;
+		}
+
+		public void run() {
+
+			do { // Resend loop
+
+				if (!messages.containsKey(message_id)) {
+					System.out.println("Message already gotten acknowledgement. Closing Thread.");
+					this.interrupt();
+					return;
+
+				} else {
+					byte[] sendData = new byte[256];
+					sendData = message.getBytes();
+					DatagramPacket s = new DatagramPacket(sendData, sendData.length, m_address, m_port);
+
+					try {
+						send_socket.send(s);
+					} catch (IOException e) {
+						System.out.println("IOException at: " + e.getMessage());
+					}
+					System.out.println("[Server] Re-trying to send [" + Integer.toString(message_id) + "]");
+				}
+				try {
+					Thread.sleep(400); // Will try again (iterate) after 400 ms
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} while (true);
+
+		}
+
 	}
 
 }
